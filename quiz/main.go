@@ -38,15 +38,20 @@ func main() {
 	var counter int
 
 	for i, q := range quiz{
-		select {
-		case <- timer.C:
-			fmt.Printf("Oh no! You ran out of time! ... Score: %d / %d\n", counter, len(quiz))
-			return
-		default:
-			fmt.Printf("Question %d: %s?  ", i+1,q.question)
+		fmt.Printf("Question %d: %s?  ", i+1,q.question)
+		answerChannel := make(chan string)
+		go func(){
 			var answer string
 			// Scanf will trim input/ spaces
 			fmt.Scanf("%s\n", &answer)
+			answerChannel <- answer
+		}()
+
+		select {
+		case <- timer.C:
+			fmt.Printf("\nOh no! You ran out of time! ... Score: %d / %d\n", counter, len(quiz))
+			return
+		case answer := <- answerChannel:
 			if answer == q.answer{
 				fmt.Printf("Correct\n")
 				counter++
@@ -54,7 +59,6 @@ func main() {
 				fmt.Printf("Inorrect\n")
 			}
 		}
-		
 	}
 	fmt.Printf("Score: %d / %d\n", counter, len(quiz))
 }
