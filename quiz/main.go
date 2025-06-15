@@ -7,20 +7,25 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
     // Help flag
 	csvQuiz := flag.String("csv", "problems.csv", "csv file containg questions and answers in format `[question],[answer]`")
+	timeLimit := flag.Int("limit", 30, "Time limit for the quiz in seconds")
 	flag.Parse()
-	_ = csvQuiz
 
 	// *csvQuiz - pointer to a string 
 	file, err := os.Open(*csvQuiz)
-
 	if err != nil {
 		exit( fmt.Sprintf("Failed to open csv file %s\nERROR : %s", *csvQuiz, err))
 	}
+
+	//
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second) 
+	// blocks until it gets message from the channel
+	// <- timer.C
 
 	// csv reader takes io.reader && parse entire file
 	csvReader := csv.NewReader(file)
@@ -32,23 +37,26 @@ func main() {
 	quiz := parseLines(lines)
 	var counter int
 
-
 	for i, q := range quiz{
-		fmt.Printf("Question %d: %s?  ", i+1,q.question)
-		var answer string
-		// Scanf will trim input/ spaces
-		fmt.Scanf("%s\n", &answer)
-		if answer == q.answer{
-			fmt.Printf("Correct\n")
-			counter++
-		} else {
-			fmt.Printf("Inorrect\n")
+		select {
+		case <- timer.C:
+			fmt.Printf("Oh no! You ran out of time! ... Score: %d / %d\n", counter, len(quiz))
+			return
+		default:
+			fmt.Printf("Question %d: %s?  ", i+1,q.question)
+			var answer string
+			// Scanf will trim input/ spaces
+			fmt.Scanf("%s\n", &answer)
+			if answer == q.answer{
+				fmt.Printf("Correct\n")
+				counter++
+			} else {
+				fmt.Printf("Inorrect\n")
+			}
 		}
+		
 	}
-
 	fmt.Printf("Score: %d / %d\n", counter, len(quiz))
-
-
 }
 
 
@@ -70,12 +78,16 @@ func parseLines(lines [][]string) []problem {
 	for i, line := range lines {
 		problems[i] = problem {
 			question: line[0],
-			answer: strings.TrimSpace(line[1]),
+			answer: strings.TrimSpace(line[1]), // string validator function?
 		}
 	}
 	return problems
 
 }
+
+
+// To Do
+// Add a string validator funtion?
 
 
 
